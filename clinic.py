@@ -38,16 +38,36 @@ class Clinic(db.Model):
  
     def json(self):
         return {"clinicName": self.clinicName, "doctorName": self.doctorName, "groupedLocation": self.groupedLocation, "address": self.address, "postalCode": self.postalCode, "specialty": self.specialty, "contactNumber": self.contactNumber}
+class ClinicOpening(db.Model):
+    __tablename__ = 'clinicOpening'
+ 
+    clinicName = db.Column(db.String(100), primary_key=True)
+    openingDays = db.Column(db.String(20), primary_key=True)
+    openingHour = db.Column(db.String(10), primary_key=True)
+    closingHour = db.Column(db.String(10), nullable=False)
+ 
+    def __init__(clinicName, openingDays, openingHour, closingHour):
+        self.clinicName = clinicName
+        self.openingDays = openingDays
+        self.openingHour = openingHour
+        self.closingHour = closingHour
+ 
+    def json(self):
+        return {"clinicName": self.clinicName, "openingDays": self.openingDays, "openingHour": self.openingHour, "closingHour": self.closingHour}
 
 # get all clinics
 @app.route("/clinic")
 def get_all():
-	return jsonify({"clinic": [clinic.json() for clinic in Clinic.query.all()]})
- 
+    # query for clinic alone
+	# return jsonify({"clinic": [clinic.json() for clinic in Clinic.query.all()]})
+
+    # query for clinic and opening hours
+    return jsonify({"clinic": [clinic.json() for clinic in Clinic.query(Clinic).join(ClinicOpening).all()]})
+
 #get clinics from name with %
 @app.route("/clinic/<string:clinicName>")
 def find_by_clinicName(clinicName):
-    clinic = Clinic.query.filter(clinicName.like(f'%{clinicName}%')).all()
+    clinic = Clinic.query(Clinic).join(ClinicOpening).filter(clinicName.like(f'%{clinicName}%')).all()
     if clinic:
         return jsonify(clinic.json())
     return jsonify({"message": "Clinic not found."}), 404
@@ -55,7 +75,7 @@ def find_by_clinicName(clinicName):
 # get clinics by location group
 @app.route("/clinic/<string:groupedLocation>")
 def find_by_groupedLocation(groupedLocation):
-    groupedLocation = Clinic.query.filter_by(groupedLocation=groupedLocation).all()
+    groupedLocation = Clinic.query(Clinic).join(ClinicOpening).filter_by(groupedLocation=groupedLocation).all()
     if groupedLocation:
         return jsonify(groupedLocation.json())
     return jsonify({"message": "No clinics found."}), 404
